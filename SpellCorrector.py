@@ -47,8 +47,8 @@ vocabulary = list(set(OOV.get_nplus_words(tokenized_sentences, 2)))
 # Replace less frequent word by <UNK>
 processed_sentences = OOV.replace_words_below_n_by_unk(tokenized_sentences, 2)
 # Get the unigram and bigram
-unigram_counts = Ngram.n_grams_dict(processed_sentences, 1)
-bigram_counts = Ngram.n_grams_dict(processed_sentences, 2)
+unigram_counts = Ngram.n_grams_dict(processed_sentences, 2)
+bigram_counts = Ngram.n_grams_dict(processed_sentences, 3)
 
 
 def get_probability(previous_n_words, word, 
@@ -94,28 +94,31 @@ def get_corrections(previous_n_words_i, word, vocab, n=2, verbose = False):
         else:
             previous_n_words.append(w)
         
-    suggestions = list(Candidates.edit_one_letter(word).intersection(vocabulary)) or list(Candidates.edit_two_letters(word).intersection(vocabulary)) 
+    suggestions = list(word) and list(Candidates.edit_one_letter(word).intersection(vocabulary)) and list(Candidates.edit_two_letters(word).intersection(vocabulary)) 
     
     words_prob = {}
     for w in suggestions:
         # To make sure all suggestions is within edit distance of 2
         _, min_edits = Candidates.min_edit_distance(word,w)
-        if min_edits <= 2:
-            if min_edits <= 1:
-                edit = ErrorModel.editType(w,word)
-               # if edit:##Some word cannot find edit
-                if edit[0] == "Insertion":
-                     error_prob = ErrorModel.channelModel(edit[3][0],edit[3][1], 'add',corpus)
-                if edit[0] == 'Deletion':
-                    error_prob = ErrorModel.channelModel(edit[4][0], edit[4][1], 'del',corpus)
-                if edit[0] == 'Reversal':
-                    error_prob = ErrorModel.channelModel(edit[4][0], edit[4][1], 'rev',corpus)
-                if edit[0] == 'Substitution':
-                    error_prob = ErrorModel.channelModel(edit[3], edit[4], 'sub',corpus)
-            #    else:
-             #       error_prob = 1
+        if not w in vocab:
+            if min_edits <= 2:
+                if min_edits == 1:
+                    edit = ErrorModel.editType(w,word)
+                if edit:##Some word cannot find edit
+                    if edit[0] == "Insertion":
+                        error_prob = ErrorModel.channelModel(edit[3][0],edit[3][1], 'add',corpus)
+                    if edit[0] == 'Deletion':
+                        error_prob = ErrorModel.channelModel(edit[4][0], edit[4][1], 'del',corpus)
+                    if edit[0] == 'Reversal':
+                        error_prob = ErrorModel.channelModel(edit[4][0], edit[4][1], 'rev',corpus)
+                    if edit[0] == 'Substitution':
+                        error_prob = ErrorModel.channelModel(edit[3], edit[4], 'sub',corpus)
+                else:
+                    error_prob = 1
             else:
                 error_prob = 1
+        else:
+            error_prob = 1
             language_prob = get_probability(previous_n_words, w, 
                         unigram_counts, bigram_counts, len(vocabulary), k=1.0)
             
