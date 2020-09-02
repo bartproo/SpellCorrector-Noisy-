@@ -30,7 +30,7 @@ def editType(candidate, word):
         error=""
         x=''
         w=''
-        for i in range(min([len(word),len(candidate)])):
+        for i in range(min([len(word),len(candidate)])-1):
             if candidate[0:i+1] != word[0:i+1]:
                 if candidate[i:] == word[i-1:]:
                     edit[1]=True
@@ -58,7 +58,6 @@ def editType(candidate, word):
                     x = error
                     w = correct
                     break
-        for i in range(min([len(word),len(candidate)])-1):
                 if candidate[i] == word[i+1] and candidate[i+2:]==word[i+2:]:
                     edit[3]=True
                     correct = candidate[i]+candidate[i+1]
@@ -68,7 +67,7 @@ def editType(candidate, word):
                     break
         candidate=candidate[::-1]
         word=word[::-1]
-        for i in range(min([len(word),len(candidate)])):
+        for i in range(min([len(word),len(candidate)])-1):
             if candidate[0:i+1] != word[0:i+1]:
                 if candidate[i:] == word[i-1:]:
                     edit[1]=True
@@ -96,7 +95,6 @@ def editType(candidate, word):
                     x = error
                     w = correct
                     break
-        for i in range(min([len(word),len(candidate)])-1):
                 if candidate[i] == word[i+1] and candidate[i+2:]==word[i+2:]:
                     edit[3]=True
                     correct = candidate[i]+candidate[i+1]

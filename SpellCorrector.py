@@ -44,11 +44,12 @@ for sentence in sentences:
 
 # Get Vocabulary
 vocabulary = list(set(OOV.get_nplus_words(tokenized_sentences, 2)))
+vocabulary = vocabulary+['<s>']+['<e>']
 # Replace less frequent word by <UNK>
 processed_sentences = OOV.replace_words_below_n_by_unk(tokenized_sentences, 2)
 # Get the unigram and bigram
-unigram_counts = Ngram.n_grams_dict(processed_sentences, 2)
-bigram_counts = Ngram.n_grams_dict(processed_sentences, 3)
+unigram_counts = Ngram.n_grams_dict(processed_sentences, 1)
+bigram_counts = Ngram.n_grams_dict(processed_sentences, 2)
 
 
 def get_probability(previous_n_words, word, 
@@ -83,6 +84,7 @@ def get_corrections(previous_n_words_i, word, vocab, n=2, verbose = False):
     '''
     Get n candidates with individual probability
     '''
+    assert type(previous_n_words_i) == list
     corpus = ' '.join(vocabulary)
     suggestions = []
     n_best = []
@@ -93,17 +95,20 @@ def get_corrections(previous_n_words_i, word, vocab, n=2, verbose = False):
             previous_n_words.append('<unk>')
         else:
             previous_n_words.append(w)
+            
+    ##Suggestions include input word only if the input word in vocab
+    if word in vocab:    
+        suggestions = [word] + list(Candidates.edit_one_letter(word).intersection(vocabulary)) or list(Candidates.edit_two_letters(word).intersection(vocabulary)) 
+    else:
+        suggestions = list(Candidates.edit_one_letter(word).intersection(vocabulary)) or list(Candidates.edit_two_letters(word).intersection(vocabulary)) 
         
-    suggestions = list(word) and list(Candidates.edit_one_letter(word).intersection(vocabulary)) and list(Candidates.edit_two_letters(word).intersection(vocabulary)) 
-    
     words_prob = {}
-    for w in suggestions:
+    for w in suggestions: 
         # To make sure all suggestions is within edit distance of 2
-        _, min_edits = Candidates.min_edit_distance(word,w)
-        if not w in vocab:
+        _, min_edits = Candidates.min_edit_distance(' '.join(word),w)
+        if not word in vocab: ##use error model only when it is non word error
             if min_edits <= 2:
-                if min_edits == 1:
-                    edit = ErrorModel.editType(w,word)
+                edit = ErrorModel.editType(w,' '.join(word))
                 if edit:##Some word cannot find edit
                     if edit[0] == "Insertion":
                         error_prob = ErrorModel.channelModel(edit[3][0],edit[3][1], 'add',corpus)
@@ -119,14 +124,13 @@ def get_corrections(previous_n_words_i, word, vocab, n=2, verbose = False):
                 error_prob = 1
         else:
             error_prob = 1
-            language_prob = get_probability(previous_n_words, w, 
+        language_prob = get_probability(previous_n_words, w, 
                         unigram_counts, bigram_counts, len(vocabulary), k=1.0)
             
-            words_prob[w] = language_prob * error_prob
+        words_prob[w] = language_prob * error_prob
         
     n_best = Counter(words_prob).most_common(n)
     
     if verbose: print("entered word = ", word, "\nsuggestions = ", suggestions)
 
     return n_best
-
